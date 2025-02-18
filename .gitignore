@@ -1,0 +1,12 @@
+__pycache__
+.pytest_cache
+*.pyc
+bin/
+lib/
+lib64
+pyvenv.cfg
+share/
+testdb.json*
+pupdb.egg-info/
+venv/
+noFiles/
