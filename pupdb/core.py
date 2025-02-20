@@ -65,12 +65,19 @@ class PupDB(object):
                 db_file.write(json.dumps(database))
                 return True
 
+
     def set(self, key, val):
-        with self._thread_lock:  # Khóa luồng đảm bảo chỉ 1 luồng truy cập
+    # Giữ khóa file cho toàn bộ quá trình read-modify-write.
+        with self.process_lock:
             try:
-                database = self._get_database()
+                # Đọc database (không cần _get_database() vì đã có khóa)
+                with open(self.db_file_path, 'r') as db_file:
+                    database = json.load(db_file)
+                # Cập nhật dữ liệu
                 database[key] = val
-                self._flush_database(database)
+                # Ghi lại database
+                with open(self.db_file_path, 'w') as db_file:
+                    json.dump(database, db_file)
             except Exception:
                 logging.error('Error while writing to DB: %s', traceback.format_exc())
                 return False
@@ -87,23 +94,28 @@ class PupDB(object):
         database = self._get_database()
         return database.get(key, None)
 
+        
     def remove(self, key):
         """
         Removes a key from the database.
         """
-        with self._thread_lock:  # Đảm bảo thao tác xóa an toàn khi có nhiều luồng
-            key = str(key)
-            database = self._get_database()
+        key = str(key)
+        with self.process_lock:
+            # Đọc database
+            with open(self.db_file_path, 'r') as db_file:
+                database = json.load(db_file)
+            # Nếu key không tồn tại, raise KeyError ngay
             if key not in database:
                 raise KeyError('Non-existent Key {} in database'.format(key))
+            # Xoá key
             del database[key]
-            try:
-                self._flush_database(database)
-            except Exception:
-                logging.error('Error while writing to DB: %s', traceback.format_exc())
-                return False
-            return True
+            # Ghi lại database
+            with open(self.db_file_path, 'w') as db_file:
+                json.dump(database, db_file)
+        return True
 
+ 
+        
     def keys(self):
         """
             Returns a list (py27) or iterator (py3) of all the keys

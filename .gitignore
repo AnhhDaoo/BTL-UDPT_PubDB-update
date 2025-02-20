@@ -10,3 +10,4 @@ testdb.json*
 pupdb.egg-info/
 venv/
 noFiles/
+*.coverage
